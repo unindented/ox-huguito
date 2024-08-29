@@ -38,5 +38,6 @@
 (require 'test-format)
 (require 'test-front-matter)
 (require 'test-headlines)
+(require 'test-links)
 
 ;;; all-tests.el ends here
