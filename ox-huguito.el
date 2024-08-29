@@ -65,6 +65,31 @@ See `format-time-string' for details on how to build this string."
   :group 'org-export-huguito
   :type 'string)
 
+;;;; Headline
+
+(defcustom org-huguito-headline-levels 5
+  "The last level which is still exported as a headline.
+
+Inferior levels will usually produce itemize or enumerate lists when
+exported, but backend behavior may differ.
+
+This option can also be set with the OPTIONS keyword, e.g. \"H:2\"."
+  :group 'org-export-general
+  :type 'integer
+  :safe #'integerp)
+
+(defcustom org-huguito-toplevel-hlevel 2
+  "Heading level to use for level 1 Org headings.
+
+If this is 1, headline levels will be preserved on export.  If this is
+2, top level Org headings will be exported to level 2 Markdown headings,
+level 2 Org headings will be exported to level 3 Markdown headings, and
+so on.
+
+By default starts at level 2, which better matches Hugo's defaults."
+  :group 'org-export-huguito
+  :type 'integer)
+
 
 
 ;;; Define backend
@@ -83,6 +108,12 @@ See `format-time-string' for details on how to build this string."
   '((template . org-huguito-template))
   :options-alist
   '( ; (:property keyword option default behavior)
+    (:with-smart-quotes nil "'" nil) ; Goldmark takes care of this
+    (:with-special-strings nil "-" nil) ; Goldmark takes care of this
+    (:with-sub-superscript nil "^" '{}) ; Require curly brackets to avoid ambiguity
+    (:with-toc nil "toc" nil) ; Table of contents not supported for now
+    (:headline-levels nil "H" org-huguito-headline-levels) ; Export up to H6
+    (:md-toplevel-hlevel nil nil org-huguito-toplevel-hlevel) ; Start at 2 by default
     (:huguito-last-modified "LAST_MODIFIED" nil nil parse)
     (:huguito-publish-date "PUBLISH_DATE" nil nil parse)
     (:huguito-expiry-date "EXPIRY_DATE" nil nil parse)

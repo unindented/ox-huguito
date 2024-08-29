@@ -35,6 +35,8 @@
 (let ((ox-huguito-git-root (file-truename (vc-git-root default-directory))))
   (package-install-file (expand-file-name "ox-huguito.el" ox-huguito-git-root)))
 
+(require 'test-format)
 (require 'test-front-matter)
+(require 'test-headlines)
 
 ;;; all-tests.el ends here
