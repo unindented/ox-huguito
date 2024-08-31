@@ -105,9 +105,11 @@ By default starts at level 2, which better matches Hugo's defaults."
               (if a (org-huguito-export-to-md t s v)
                 (org-open-file (org-huguito-export-to-md nil s v)))))))
   :translate-alist
-  '((template . org-huguito-template))
+  '((latex-fragment . org-huguito-latex-fragment)
+    (template . org-huguito-template))
   :options-alist
   '( ; (:property keyword option default behavior)
+    (:with-latex nil "tex" org-export-with-latex) ; Override HTML definition
     (:with-smart-quotes nil "'" nil) ; Goldmark takes care of this
     (:with-special-strings nil "-" nil) ; Goldmark takes care of this
     (:with-sub-superscript nil "^" '{}) ; Require curly brackets to avoid ambiguity
@@ -229,6 +231,20 @@ INFO is a plist used as a communication channel."
 
 
 ;;; Transcode functions
+
+;;;; LaTeX fragment
+
+(defun org-huguito-latex-fragment (latex-fragment _contents info)
+  "Transcode a LATEX-FRAGMENT object from Org to Markdown.
+CONTENTS is nil.  INFO is a plist holding contextual information."
+  (when (plist-get info :with-latex)
+    (let ((frag (org-element-property :value latex-fragment)))
+      (cond
+       ((string-match-p "^\\$\\$" frag)
+        (concat "\\[" (substring frag 2 -2) "\\]"))
+       ((string-match-p "^\\$" frag)
+        (concat "\\( " (substring frag 1 -1) " \\)"))
+       (t frag)))))
 
 ;;;; Template
 
