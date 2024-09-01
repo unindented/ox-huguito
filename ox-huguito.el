@@ -90,6 +90,24 @@ By default starts at level 2, which better matches Hugo's defaults."
   :group 'org-export-huguito
   :type 'integer)
 
+;;;; Verbatim
+
+(defcustom org-huguito-with-verbatim nil
+  "Non-nil means wrap verbatim elements in HTML tags.
+
+This can have three different values:
+nil     Do not wrap in HTML tags, just backticks.
+`kbd'   Wrap in `kbd' tags.
+`samp'  Wrap in `samp' tags.
+
+This option can also be set with the OPTIONS keyword,
+e.g. \"verbatim:kbd\"."
+  :group 'org-export-huguito
+  :type '(choice
+          (const :tag "Backticks" nil)
+          (const :tag "With `kbd' tags" kbd)
+          (const :tag "With `samp' tags" samp)))
+
 
 
 ;;; Define backend
@@ -106,7 +124,8 @@ By default starts at level 2, which better matches Hugo's defaults."
                 (org-open-file (org-huguito-export-to-md nil s v)))))))
   :translate-alist
   '((latex-fragment . org-huguito-latex-fragment)
-    (template . org-huguito-template))
+    (template . org-huguito-template)
+    (verbatim . org-huguito-verbatim))
   :options-alist
   '( ; (:property keyword option default behavior)
     (:with-latex nil "tex" org-export-with-latex) ; Override HTML definition
@@ -114,6 +133,7 @@ By default starts at level 2, which better matches Hugo's defaults."
     (:with-special-strings nil "-" nil) ; Goldmark takes care of this
     (:with-sub-superscript nil "^" '{}) ; Require curly brackets to avoid ambiguity
     (:with-toc nil "toc" nil) ; Table of contents not supported for now
+    (:with-verbatim nil "verbatim" org-huguito-with-verbatim)
     (:headline-levels nil "H" org-huguito-headline-levels) ; Export up to H6
     (:md-toplevel-hlevel nil nil org-huguito-toplevel-hlevel) ; Start at 2 by default
     (:huguito-last-modified "LAST_MODIFIED" nil nil parse)
@@ -258,6 +278,23 @@ communication channel."
    "\n\n"
    ;; Contents.
    contents))
+
+;;;; Verbatim
+
+(defun org-huguito-verbatim (verbatim contents info)
+  "Transcode VERBATIM object into Markdown format.
+
+If `org-huguito-with-verbatim' is non-nil, wrap in the corresponding
+tags.
+
+CONTENTS is nil.  INFO is a plist used as a communication channel."
+  (let ((tag (plist-get info :with-verbatim)))
+    (if tag
+        (format "<%s>%s</%s>"
+                tag
+                (org-element-property :value verbatim)
+                tag)
+      (org-md-verbatim verbatim contents info))))
 
 
 

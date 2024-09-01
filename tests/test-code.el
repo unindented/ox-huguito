@@ -1,4 +1,4 @@
-;;; all-tests.el --- Tests for ox-huguito.el  -*- lexical-binding: t; -*-
+;;; test-code.el --- Tests regarding code elements  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2024 Daniel Perez Alvarez
 
@@ -21,26 +21,26 @@
 
 ;;; Code:
 
-(require 'package)
+(require 'ox-huguito)
 
-(setq package-user-dir (file-truename (concat default-directory ".packages")))
 
-(package-initialize)
+;;;; Code
 
-(unless package-archive-contents
-  (package-refresh-contents))
+(ert-deftest ox-huguito/code ()
+  "Surrounds code elements with backticks."
+  (org-test-with-temp-text "
+#+title: Some title
 
-(require 'vc-git)
+Some ~text~.
+"
+    (let ((export-buffer "*Test Export*")
+          (org-export-show-temporary-export-buffer nil))
+      (org-export-to-buffer 'huguito export-buffer)
+      (with-current-buffer export-buffer
+        (goto-char (point-min))
+        (should (search-forward "Some `text`."))))))
 
-(let ((ox-huguito-git-root (file-truename (vc-git-root default-directory))))
-  (package-install-file (expand-file-name "ox-huguito.el" ox-huguito-git-root)))
 
-(require 'test-code)
-(require 'test-format)
-(require 'test-front-matter)
-(require 'test-headlines)
-(require 'test-latex)
-(require 'test-links)
-(require 'test-verbatim)
+(provide 'test-code)
 
-;;; all-tests.el ends here
+;;; test-code.el ends here
