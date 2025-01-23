@@ -1,6 +1,6 @@
 ;;; ox-huguito.el --- Small Hugo Markdown backend for Org export engine  -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2024 Daniel Perez Alvarez
+;; Copyright (C) 2025 Daniel Perez Alvarez
 
 ;; Author: Daniel Perez Alvarez <daniel@unindented.org>
 ;; Created: 19 Aug 2024

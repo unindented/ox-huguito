@@ -1,6 +1,6 @@
 ;;; test-code.el --- Tests regarding code elements  -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2024 Daniel Perez Alvarez
+;; Copyright (C) 2025 Daniel Perez Alvarez
 
 ;; Author: Daniel Perez Alvarez <daniel@unindented.org>
 
