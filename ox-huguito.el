@@ -90,6 +90,16 @@ By default starts at level 2, which better matches Hugo's defaults."
   :group 'org-export-huguito
   :type 'integer)
 
+;;;; Src block
+
+(defcustom org-huguito-src-block-languages
+  '(("conf-toml" . "toml"))
+  "Alist mapping source block language names to values supported by
+Chroma (the syntax highlighter used by Hugo)."
+  :group 'org-export-huguito
+  :type '(alist :key-type (string :tag "Source block language name")
+                :value-type (string :tag "Chroma language name")))
+
 ;;;; Verbatim
 
 (defcustom org-huguito-with-verbatim nil
@@ -124,6 +134,7 @@ e.g. \"verbatim:kbd\"."
                 (org-open-file (org-huguito-export-to-md nil s v)))))))
   :translate-alist
   '((latex-fragment . org-huguito-latex-fragment)
+    (src-block . org-huguito-src-block)
     (template . org-huguito-template)
     (verbatim . org-huguito-verbatim))
   :options-alist
@@ -139,7 +150,8 @@ e.g. \"verbatim:kbd\"."
     (:huguito-last-modified "LAST_MODIFIED" nil nil parse)
     (:huguito-publish-date "PUBLISH_DATE" nil nil parse)
     (:huguito-expiry-date "EXPIRY_DATE" nil nil parse)
-    (:huguito-date-timestamp-format nil nil org-huguito-date-timestamp-format)))
+    (:huguito-date-timestamp-format nil nil org-huguito-date-timestamp-format)
+    (:huguito-src-block-languages nil nil org-huguito-src-block-languages)))
 
 
 
@@ -265,6 +277,18 @@ CONTENTS is nil.  INFO is a plist holding contextual information."
        ((string-match-p "^\\$" frag)
         (concat "\\( " (substring frag 1 -1) " \\)"))
        (t frag)))))
+
+;;;; Src block
+
+(defun org-huguito-src-block (src-block _contents info)
+  "Transcode SRC-BLOCK element into Markdown format.
+CONTENTS is nil.  INFO is a plist used as a communication channel."
+  (let* ((code (org-remove-indentation
+                (org-export-format-code-default src-block info)))
+         (lang-map (plist-get info :huguito-src-block-languages))
+         (lang (org-element-property :language src-block))
+         (mapped-lang (or (cdr (assoc lang lang-map)) lang)))
+    (format "```%s\n%s```\n" (or mapped-lang "") code)))
 
 ;;;; Template
 
