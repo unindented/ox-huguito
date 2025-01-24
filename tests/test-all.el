@@ -36,6 +36,7 @@
   (package-install-file (expand-file-name "ox-huguito.el" ox-huguito-git-root)))
 
 (require 'test-code)
+(require 'test-footnotes)
 (require 'test-format)
 (require 'test-front-matter)
 (require 'test-headlines)

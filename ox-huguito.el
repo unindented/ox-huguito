@@ -52,6 +52,22 @@
   :tag "Org Huguito Markdown"
   :group 'org-export)
 
+(defcustom org-huguito-footnote-format "[^%s]"
+  "The format for the footnote reference.
+%s will be replaced by the footnote reference itself."
+  :group 'org-export-huguito
+  :type 'string)
+
+(defcustom org-huguito-footnote-separator "^, ^"
+  "Text used to separate footnotes."
+  :group 'org-export-huguito
+  :type 'string)
+
+(defcustom org-huguito-footnotes-headline t
+  "Non-nil means add a headline above the footnotes section."
+  :group 'org-export-huguito
+  :type 'boolean)
+
 ;;;; Front-matter
 
 (defcustom org-huguito-date-timestamp-format "%FT%T%z"
@@ -133,7 +149,9 @@ e.g. \"verbatim:kbd\"."
               (if a (org-huguito-export-to-md t s v)
                 (org-open-file (org-huguito-export-to-md nil s v)))))))
   :translate-alist
-  '((latex-fragment . org-huguito-latex-fragment)
+  '((footnote-reference . org-huguito-footnote-reference)
+    (inner-template . org-huguito-inner-template)
+    (latex-fragment . org-huguito-latex-fragment)
     (src-block . org-huguito-src-block)
     (template . org-huguito-template)
     (verbatim . org-huguito-verbatim))
@@ -147,6 +165,9 @@ e.g. \"verbatim:kbd\"."
     (:with-verbatim nil "verbatim" org-huguito-with-verbatim)
     (:headline-levels nil "H" org-huguito-headline-levels) ; Export up to H6
     (:md-toplevel-hlevel nil nil org-huguito-toplevel-hlevel) ; Start at 2 by default
+    (:huguito-footnote-format nil nil org-huguito-footnote-format)
+    (:huguito-footnote-separator nil nil org-huguito-footnote-separator)
+    (:huguito-footnotes-headline nil nil org-huguito-footnotes-headline)
     (:huguito-last-modified "LAST_MODIFIED" nil nil parse)
     (:huguito-publish-date "PUBLISH_DATE" nil nil parse)
     (:huguito-expiry-date "EXPIRY_DATE" nil nil parse)
@@ -214,6 +235,42 @@ to be translated with `org-export-data' or alike."
            (org-format-timestamp (car date) fmt))
           (t date))))
 
+(defun org-huguito--footnote-label (label)
+  "Normalize a footnote LABEL.
+If the label is not a number, keep it. Otherwise, discard it, as the
+footnotes get re-numbered by `org-export-get-footnote-number'."
+  (when (not (and (stringp label)
+                  (equal label (number-to-string (string-to-number label)))))
+    label))
+
+(defun org-huguito--footnote-formatted (footnote info)
+  "Formats a single footnote entry FOOTNOTE.
+FOOTNOTE is a cons cell of the form (number . definition).  INFO is a
+plist with contextual information."
+  (pcase footnote
+    (`(,n ,label ,def)
+     (let ((normalized-label (org-huguito--footnote-label label)))
+       (format "%s: %s\n"
+               (format (plist-get info :huguito-footnote-format) 
+                       (or normalized-label n))
+               (org-trim (org-export-data def info)))))))
+
+(defun org-huguito--footnotes-section (info)
+  "Format the footnotes section.
+INFO is a plist used as a communication channel."
+  (let* ((fn-alist (org-export-collect-footnote-definitions info))
+         (has-headline (plist-get info :huguito-footnotes-headline))
+         (headline-style (plist-get info :md-headline-style))
+         (section-title (org-html--translate "Footnotes" info)))
+    (when fn-alist
+      (format (plist-get info :md-footnotes-section)
+              (if has-headline
+                  (org-md--headline-title headline-style (plist-get info :md-toplevel-hlevel) section-title)
+                "")
+              (mapconcat (lambda (fn) (org-huguito--footnote-formatted fn info))
+                         fn-alist
+                         "\n")))))
+
 (defun org-huguito--front-matter-title (info)
   "Return title to be used in the front-matter.
 INFO is a plist used as a communication channel."
@@ -264,6 +321,22 @@ INFO is a plist used as a communication channel."
 
 ;;; Transcode functions
 
+;;;; Footnote reference
+
+(defun org-huguito-footnote-reference (footnote-reference _contents info)
+  "Transcode a FOOTNOTE-REFERENCE element from Org to Markdown.
+CONTENTS is nil.  INFO is a plist holding contextual information."
+  (concat
+   ;; Insert separator between two footnotes in a row.
+   (let ((prev (org-export-get-previous-element footnote-reference info)))
+     (when (org-element-type-p prev 'footnote-reference)
+       (plist-get info :huguito-footnote-separator)))
+   (let* ((n (org-export-get-footnote-number footnote-reference info))
+          (label (org-huguito--footnote-label (org-element-property :label footnote-reference))))
+     (format
+      (plist-get info :huguito-footnote-format)
+      (or label n)))))
+
 ;;;; LaTeX fragment
 
 (defun org-huguito-latex-fragment (latex-fragment _contents info)
@@ -291,6 +364,23 @@ CONTENTS is nil.  INFO is a plist used as a communication channel."
     (format "```%s\n%s```\n" (or mapped-lang "") code)))
 
 ;;;; Template
+
+(defun org-huguito-inner-template (contents info)
+  "Return body of document after converting it to Markdown syntax.
+CONTENTS is the transcoded contents string.  INFO is a plist
+holding export options."
+  ;; Make sure CONTENTS is separated from table of contents and
+  ;; footnotes with at least a blank line.
+  (concat
+   ;; Table of contents.
+   (let ((depth (plist-get info :with-toc)))
+     (when depth
+       (concat (org-md--build-toc info (and (wholenump depth) depth)) "\n")))
+   ;; Document contents.
+   contents
+   "\n"
+   ;; Footnotes section.
+   (org-huguito--footnotes-section info)))
 
 (defun org-huguito-template (contents info)
   "Return complete document string after Markdown conversion.
