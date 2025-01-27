@@ -151,6 +151,7 @@ e.g. \"verbatim:kbd\"."
   :translate-alist
   '((footnote-reference . org-huguito-footnote-reference)
     (inner-template . org-huguito-inner-template)
+    (item . org-huguito-item)
     (latex-fragment . org-huguito-latex-fragment)
     (src-block . org-huguito-src-block)
     (template . org-huguito-template)
@@ -271,6 +272,30 @@ INFO is a plist used as a communication channel."
                          fn-alist
                          "\n")))))
 
+(defun org-huguito--format-list-item (contents type checkbox term counter info)
+  "Format a list item into Markdown.
+CONTENTS is the item contents.  TYPE is one of symbols `ordered',
+`unordered', or `descriptive'.  CHECKBOX is nil or one of
+symbols `on', `off', or `trans'.  TERM is nil or a string.  COUNTER is
+a number.  INFO is a plist used as a communication channel."
+  (let* ((contents (and contents
+                        (org-trim (replace-regexp-in-string "^" "    " contents))))
+         (checkbox (pcase checkbox
+                     (`on "[X] ")
+                     (`off "[ ] ")
+                     (`trans "[-] ")))
+         (term (or term "(no term)"))
+         (bullet (pcase type
+                   (`ordered (concat counter "."))
+                   (`unordered "-")
+                   (`descriptive ":")))
+         (bullet-filler (make-string (max 1 (- 4 (length bullet))) ? )))
+    (concat (if (eq type 'descriptive) (concat term "\n") "")
+            bullet
+            bullet-filler
+            checkbox
+            contents)))
+
 (defun org-huguito--front-matter-title (info)
   "Return title to be used in the front-matter.
 INFO is a plist used as a communication channel."
@@ -336,6 +361,27 @@ CONTENTS is nil.  INFO is a plist holding contextual information."
      (format
       (plist-get info :huguito-footnote-format)
       (or label n)))))
+
+;;;; Item
+
+(defun org-huguito-item (item contents info)
+  "Transcode ITEM element into Markdown format.
+CONTENTS is the item contents.  INFO is a plist used as
+a communication channel."
+  (let* ((plain-list (org-element-parent item))
+         (type (org-element-property :type plain-list))
+         (checkbox (org-element-property :checkbox item))
+         (tag (let ((tag (org-element-property :tag item)))
+                (and tag (org-export-data tag info))))
+         (counter (let ((struct (org-element-property :structure item)))
+                    (number-to-string
+                     (car (last (org-list-get-item-number
+                                 (org-element-property :begin item)
+                                 struct
+                                 (org-list-prevs-alist struct)
+                                 (org-list-parents-alist struct))))))))
+    (org-huguito--format-list-item
+     contents type checkbox tag counter info)))
 
 ;;;; LaTeX fragment
 

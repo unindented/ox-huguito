@@ -42,6 +42,7 @@
 (require 'test-headlines)
 (require 'test-latex)
 (require 'test-links)
+(require 'test-lists)
 (require 'test-src-block)
 (require 'test-verbatim)
 
